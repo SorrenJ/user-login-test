@@ -3,6 +3,9 @@ const { Pool } = require('pg');
 const dotenv = require('dotenv');
 const cors = require('cors'); // Import CORS middleware
 
+
+
+
 // Load environment variables
 dotenv.config();
 
@@ -62,6 +65,41 @@ app.post('/users', async (req, res) => {
         res.status(201).json({ id: result.rows[0].id });
     } catch (error) {
         console.error('Error adding user:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+
+// Route: Login
+app.post('/login', async (req, res) => {
+    // const bcrypt = require('bcrypt'); // For password hashing
+    // const hashedPassword = await bcrypt.hash(password, 10);
+    // const isPasswordValid = await bcrypt.compare(password, user.password_hash);
+    const { email, password } = req.body; // Get email and password from request body
+    try {
+        // Query the database for the user with the given email
+        const result = await pool.query('SELECT id, username, email, password_hash FROM users WHERE email = $1', [email]);
+
+        if (result.rows.length === 0) {
+            // If no user is found, send an error response
+            return res.status(401).json({ error: 'Invalid email or password' });
+        }
+
+        const user = result.rows[0];
+
+        // Compare the provided password with the stored hash
+        const isPasswordValid = password === user.password_hash; // Replace this with a proper hash comparison using bcrypt or another library
+        if (!isPasswordValid) {
+            return res.status(401).json({ error: 'Invalid email or password' });
+        }
+
+        // If the credentials are valid, send a success response
+        res.json({ 
+            message: 'Login successful', 
+            user: { id: user.id, username: user.username, email: user.email } 
+        });
+    } catch (error) {
+        console.error('Error during login:', error);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 });
